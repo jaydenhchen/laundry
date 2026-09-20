@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a2420">
+  <meta name="description" content="Fresh Fold is a 3D laundry game. Grab clothes, pour detergent, pick lint, and fold each piece by hand.">
+  <title>Fresh Fold — 3D Laundry</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3d3">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg class="svg-defs" aria-hidden="true">
+    <symbol id="icon-check" viewBox="0 0 20 20"><path d="m4 10 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M5.5 8A8 8 0 1 1 4 14.5M5.5 8V3.5M5.5 8H10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-sound" viewBox="0 0 24 24"><path d="M5 9v6h4l5 4V5L9 9H5Zm12 1a3 3 0 0 1 0 4m2-7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-muted" viewBox="0 0 24 24"><path d="M5 9v6h4l5 4V5L9 9H5Zm12 1 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <canvas id="view"></canvas>
+
+  <div id="hud">
+    <header class="hud-top">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        Fresh Fold
+      </div>
+      <div class="day-progress" aria-label="Wash day progress">
+        <span>Wash day</span>
+        <div class="progress-track"><div class="progress-fill" id="header-progress"></div></div>
+        <strong id="header-progress-label">0%</strong>
+      </div>
+      <div class="hud-top-actions">
+        <button class="icon-button" id="view-button" type="button">Reset view</button>
+        <button class="icon-button" id="sound-toggle" type="button" aria-label="Turn sound on">
+          <svg><use href="#icon-muted"></use></svg>
+        </button>
+        <button class="reset-button" id="reset-button" type="button">
+          <svg><use href="#icon-reset"></use></svg>
+          Start over
+        </button>
+      </div>
+    </header>
+
+    <aside class="task-panel">
+      <p class="eyebrow">Sunday reset</p>
+      <h1>One load.</h1>
+      <ol class="checklist" aria-label="Laundry tasks">
+        <li class="checklist-item active" data-task="load"><span class="task-check"><svg><use href="#icon-check"></use></svg></span><span><strong>Load the washer</strong><small>Grab clothes, drop in the drum</small></span></li>
+        <li class="checklist-item" data-task="detergent"><span class="task-check"><svg><use href="#icon-check"></use></svg></span><span><strong>Pour detergent</strong><small>Open the drawer, fill the cup</small></span></li>
+        <li class="checklist-item" data-task="wash"><span class="task-check"><svg><use href="#icon-check"></use></svg></span><span><strong>Run the wash</strong><small>Hit start on the washer</small></span></li>
+        <li class="checklist-item" data-task="lint"><span class="task-check"><svg><use href="#icon-check"></use></svg></span><span><strong>Pick the lint</strong><small>Pull the trap, grab every clump</small></span></li>
+        <li class="checklist-item" data-task="dry"><span class="task-check"><svg><use href="#icon-check"></use></svg></span><span><strong>Dry the load</strong><small>Start the dryer</small></span></li>
+        <li class="checklist-item" data-task="fold"><span class="task-check"><svg><use href="#icon-check"></use></svg></span><span><strong>Fold by hand</strong><small>0 of 5 folded</small></span></li>
+      </ol>
+    </aside>
+
+    <div class="prompt-card" id="prompt-card">
+      <span class="tip-number" id="prompt-number">01</span>
+      <div>
+        <strong id="prompt-title">Load the drum</strong>
+        <p id="prompt-copy">Grab each dirty item from the hamper and drop it into the washer.</p>
+      </div>
+      <div class="prompt-controls">
+        <div class="settings" id="wash-settings" hidden>
+          <label>Cycle <select id="wash-cycle"><option value="quick">Quick</option><option value="normal" selected>Normal</option><option value="heavy">Heavy</option></select></label>
+          <label>Water <select id="wash-temp"><option value="cold">Cold</option><option value="warm" selected>Warm</option><option value="hot">Hot</option></select></label>
+        </div>
+        <div class="settings" id="dry-settings" hidden>
+          <label>Dryness <select id="dry-level"><option value="damp">Damp</option><option value="normal" selected>Normal</option><option value="extra">Extra</option></select></label>
+          <label>Heat <select id="dry-heat"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>
+        </div>
+        <button class="primary-action" id="action-button" type="button">Open washer</button>
+      </div>
+    </div>
+
+    <div class="look-hint">Drag to look · Scroll to zoom · Click to grab</div>
+    <div id="hover-label" hidden></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span id="toast-message">Done</span>
+  </div>
+
+  <div class="start-screen" id="start-screen">
+    <div class="start-card">
+      <p class="eyebrow">3D laundry game</p>
+      <h2>Pour. Pick. Fold.</h2>
+      <p>Grab dirty clothes, pour a cap of detergent, pick the lint trap clean, and fold each piece on the table.</p>
+      <button class="primary-action" id="enter-button" type="button">Enter the laundry room</button>
+      <small>Drag to look around. Click objects to use them.</small>
+    </div>
+  </div>
+
+  <div class="completion-modal" id="completion-modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="completion-card">
+      <p class="eyebrow">Wash day complete</p>
+      <h2>Clean, dry, folded.</h2>
+      <p>You handled the whole load in 3D — bottle, lint, and every crease.</p>
+      <div class="completion-stats">
+        <div><strong>5</strong><span>items folded</span></div>
+        <div><strong id="final-score">100</strong><span>care score</span></div>
+      </div>
+      <button class="primary-action" id="play-again" type="button">Do another load</button>
+    </div>
+  </div>
+
+  <div id="webgl-error" hidden>
+    <p>This 3D laundry room needs WebGL. Try Chrome, or use the local link <a href="http://127.0.0.1:48760/">http://127.0.0.1:48760/</a>.</p>
+  </div>
+
+  <script type="module" src="app.js?v=3d9"></script>
+</body>
+</html>
